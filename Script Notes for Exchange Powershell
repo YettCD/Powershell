@@ -1,0 +1,299 @@
+##Scripts made for POWERSHELL Exchange Administration. 
+
+
+#Command for adding user to a mailbox (shared)
+Add-MailboxPermission -Identity jesse.r.halterman.civ -User Christopher.d.yett.ctr -AccessRights fullaccess -AutoMapping:$false -InheritanceType All
+
+#Command to remove a user from a mailbox (shared)
+Remove-MailboxPermission -Identity jesse.r.halterman.civ -User Christopher.d.yett.ctr -AccessRights fullaccess -Confirm:$false 
+
+#gets all the inbox rules setup on the email of the user
+Get-InboxRule -Mailbox christopher.d.yett.ctr
+
+
+###Get mailbox database copy status to see if all DBs are mounted###
+Get-MailboxDatabaseCopyStatus <EURD01*>
+
+
+
+#should remove user from each group listed in the text fine created. 
+foreach ($group in (get-content c:\grouplist.txt)){    Remove-DistributionGroupMember -Identity $group -member $username -Confirm:$false -Verbose }
+
+#find groups a user is in
+$Username = "USERNAME OF PERSON"
+$DistributionGroups= Get-DistributionGroup | where { (Get-DistributionGroupMember $_.Name | foreach {$_.PrimarySmtpAddress}) -contains "$Username"}
+
+#setting a server to down to perform maintenance or updates 
+Set-ServerComponentState utinhy56 -Component serverwideoffline -State inactive -Requester maintenance 
+
+
+#get all mailboxes in a database and all other important easy to view infor for basics
+Get-Mailbox -Database $dbnamepull
+Get-Mailbox antonio.f.chang.mil | FL Name,Displayname, database, offlineaddressbook
+
+
+#check mailbox copy status by server
+Get-MailboxDatabaseCopyStatus -server <Servername>
+
+#To move the active mailbox database to failover
+Move-ActiveMailboxDatabase -server <servername>
+
+
+#remove email address from user mailbox change sip to smtp can list multiple adresses at once. 
+Set-Mailbox winfield.s.pinkstaff.mil -EmailAddresses @{remove= "sip:winfield.s.pinkstaff.mil@usa.army.mil"}
+
+#Look at what archive is setup on mailbox 
+Get-Mailbox ng.mo.moarng.mbx.log-d | fl name, *archive*
+
+
+
+
+
+#trying to message track This envoks a ps session to all the cas in the domain to pull the information Subject for message does a sudo-auto wildcard search parameter  #######HUB ONLY##########
+$servers = Get-ExchangeServer u* | where {$_.serverrole -like "*hub*" -and $_.admindisplayversion -like "*14.*"}
+$uris = $servers | foreach {"http://$_.easf.csd.disa.mil/PowerShell/"};
+$sessions = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri $uris -Authentication Kerberos 
+$results  = Invoke-Command -Session $sessions -ScriptBlock {
+############## BUILD MTL SEARCH QUERY
+get-messagetrackinglog -Start 05/17/2021  -Sender "samuel.g.ohearn.civ@mail.mil" -ResultSize unlimited
+} -throttlelimit 300 ############## end BUILD MTL SEARCH QUERY-MessageSubject "kik search warrant" -Sender "kiklawenforcement@whisper.sh" 
+$sessions | remove-pssession
+$results | ft timestamp,messagesubject,sender,recipients, eventid,RecipientStatus  -autosize
+
+
+
+
+## Export CSV for message tracking
+cd d:\yett\CSV
+$results | select timestamp,messagesubject,sender,recipients, eventid,RecipientStatus  | Export-Csv Ticket.csv -NoTypeInformation
+
+$results = $null
+
+## send email with CSV
+Send-MailMessage -to christopher.d.yett.ctr@mail.mil -Subject "email tracking" -Attachments '\\UTINHUAB9\d$\yett\csv\Ticket.csv' -from christopher.d.yett.ctr@mail.mil -SmtpServer usathu55
+
+
+
+##Clear variables
+$servers = $null; $uris = $null;$sessions = $null ; $results = $null
+
+
+#Should pull up delegates for mailbox
+Get-MailboxFolderPermission janel.m.nelson2.mil |FL user, foldername, accessrights, sharingpermissionflags
+
+#Pull distrogroup message restrictions
+Get-DistributionGroup dfas.rheinland-pfalz.jbx.list.dgk-users |ft name, requiresenderauthenticationenabled, acceptmessagesonlyfrom, acceptmessagesonlyfromdlmembers,rejectmessagesfrom,rejectmessagesfromdlmembers
+
+
+## UNTESTED FOR SEEING WHAT CALENDARS A USERS HAS ACCESS TO
+(Get-Mailbox) | Foreach-Object {
+    $Identity = $_.Identity
+        Get-Mailboxfolderpermission (($_.PrimarysmtpAddress)+":\calendar") `
+                -User david.leathers3.civ -ErrorAction SilentlyContinue
+                    } | select-Object @{n='Identity';e={$Identity}}, User, Accessrights
+
+
+### Search Mailbox for messages send results to ADMmailbox (yours)
+get-mailbox yvonne.e.gallardo2.fn  |search-mailbox -searchdumpster -searchquery ('received:10/31/2020..08/09/2021' ) -LogLevel full -LogOnly -targetmailbox christopher.d.yett.ctr@mail.mil -targetfolder "Mailbox Search" | ft displayname,resultitemscount -AutoSize
+
+
+
+### Step to try when a mailbox will not move and is giving errors. 
+
+set-mailboxdatabase "MBX DB" -datamovereplicationconstraint (default is second copy , switch to none to lift constraints) 
+
+##################################################################################################################################
+
+##add mailbox permission for multiple users to one mailbox
+get-content users.txt | foreach {Add-MailboxPermission -Identity "USARMY RIA JMC Mailbox OPCTR OPS" -User $_ -AccessRights Fullaccess -AutoMapping:$false -InheritanceType All}
+
+
+
+
+################################################################################################################################
+### Commands for checking and preping a DAG for failback after a failover ###
+
+
+
+###1#see what servers are stopped and started in the DAG
+Get-DatabaseAvailabilityGroup eurd01 -Status | fl *server*, *wit*
+
+###2# starts a server in the DAG ---------UD,UH,UG\UE,UF, UG
+Start-DatabaseAvailabilityGroup eurd01 -MailboxServer UPDCHP7A
+
+###3#Check if healthy 
+Get-MailboxDatabaseCopyStatus -Server UPDCHP6Y 
+
+###3.5# if bad restart replication service on server 
+icm UPDCHP7A.easf.csd.disa.mil {Restart-Service msexchangerepl}
+
+###3.75#Get the DBs back into healthy state
+###Resume-MailboxDatabaseCopy cols02-db38\UPDCHP7A
+?($_.status -like "failed" |resume-MailboxDatabasecopy)
+
+Get-MailboxDatabaseCopyStatus -Server UPDCHP7A | Resume-MailboxDatabaseCopy
+
+###4A### This is for then rebuilding the DAG 
+
+set-databaseavailabilitygroup eurd01
+
+###4B#stops a server in the DAG evict and backout of the DAG ////// If we just wanted to get replication going and then kick them back out otherwise do not run. 
+Stop-DatabaseAvailabilityGroup eurd01 -MailboxServer UPDCHP7A
+
+
+#5B#last command to fix the dag???/// tied into the stop command above
+Restore-DatabaseAvailabilityGroup eurd01 
+#####################################################################################################################
+
+### Command for taking txt list and sending a message with attachment to see if it goes through with attachment unaltered through specific list of CAS servers
+GC severs.txt | % {send-mailmessage -to extest_mont05@mail.mil -from extest_mont05@mail.mil -Subject "$_" -Attachments C:\Users\SAYettChristophEnt5.EPUF\desktop\file.zip -SmtpServer "$_.easf.csd.disa.mil"}
+
+
+
+
+###### Move request stuck because of site issues and other things try this for a move request####
+new-moverequest -Identity (user) -targetdatabase (database to move mailbox too) -skipmoving folderrestrictions, knowncorruptions
+(2016??)  new-moverequest -Identity (user) -targetdatabase (database to move mailbox too) -moveoptions folderrestrictions, knowncorruptions
+
+
+## Look at move request for specific person by display name##
+Get-MoveRequest  | ? {$_.displayname -like "*Christian*"} 
+
+
+############################################################################################################################
+###rebuilding DAG### 
+Get-DatabaseAvailabilityGroup eurd01 | ft st*   #Look at the stopped and started servers for the DAG in questions
+Start-DatabaseAvailabilityGroup eurd01 -ActiveDirectorySite deurd01  #starts the servers for for the DAG and in a particular Active Directory Site
+Start-DatabaseAvailabilityGroup eurd01 -MailboxServer UPDCHP7A   # tries to start specific mailbox server for the DAG 
+Set-DatabaseAvailabilityGroup eurd01        ##sets the dag
+Get-DatabaseAvailabilityGroup eurd01 | fl   ## get some information 
+
+########################################################################################################################################################################################
+###Export Mailbox change database and Import back in###
+                            #User mailbox                           where to save to                    batch name for the export
+New-MailboxExportRequest marcie.c.fort.civ@mail.mil -FilePath "\\utinhuen\PSt\MARCIEFORT.pst" -name "Marcie.c.fort.civ Export"
+                                        #look for the mailbox export request to get stats
+Get-MailboxExportRequestStatistics marcie.c.fort.civ\"Marcie.c.fort.civ Export"
+
+get-mailbox david.t.gouin.civ
+
+New-MailboxExportRequest amy.r.stclair2.ctr@mail.mil -FilePath "\\utinhuen\PSt\amystclair.pst" -name "amystclair"
+
+Get-MailboxExportRequestStatistics amy.r.stclair2.ctr\"amystclair"
+
+Remove-MailboxExportRequest amy.r.stclair2.ctr\"amystclair"
+
+set-mailbox amy.r.stclair2.ctr -Database cols01-db34 #-WhatIf
+
+New-MailboxImportRequest -Mailbox amy.r.stclair2.ctr@mail.mil -FilePath "\\utinhuen\PSt\amystclair.pst" -Name "amystclair" -BadItemLimit 1000 -AcceptLargeDataLoss
+
+Get-MailboxImportRequest -Name amystclair | Get-MailboxImportRequestStatistics
+
+ Remove-MailboxImportRequest
+
+
+
+
+
+### remove all complete move request from que for cleanup ###
+get-moverequest -movestatus Completed | remove-moverequest
+
+
+
+
+###### 6/11/2021 Mailbox export commands
+New-MailboxExportRequest robert.k.bryant.mil@mail.mil -FilePath "\\utinhuen\PST\BryantExport.pst" -name "BryantExport" -BadItemLimit 1000 -Priority high
+
+Get-MailboxExportRequestStatistics robert.k.bryant.mil\"BryantExport"  
+
+
+Remove-MailboxExportRequest robert.k.bryant.mil\"BryantExport"
+
+New-MailboxImportRequest -Mailbox BryantExport@mail.mil -FilePath "\\utinhuen\PSt\BryantExport.pst" -Name "BryantExport" -BadItemLimit 1000 -AcceptLargeDataLoss
+Get-MailboxImportRequest -Name BryantExport | Get-MailboxImportRequestStatistics
+
+ Remove-MailboxImportRequest
+
+ ZSet-Mailbox -Identity  robert.k.bryant.mil -Database paci01
+
+###*** Use this to try and repair mailbox to move again if it is failing to try something. ***###
+ New-MailboxRepairRequest -mailbox carey.burris.civ -corruptiontype provisionedfolder,searchfolder,aggregatecounts, folderview
+ Get-MailboxRepairRequest -Mailbox carey.burris.civ
+ to remove pipe previous command --->   | remove-MailboxRepairRequest 
+####################################################################################################################################################################################################
+
+
+############################################
+
+##send email from term server
+Send-MailMessage -to christopher.d.yett.ctr@mail.mil -Subject "Ticket-INC000008715238" -Attachments '\\UTINHUAB9\d$\yett\csv\Ticket-INC000008715238.csv' -Body "Messages and Report in Evaluation Mailbox Folder INC000008657873 Addresses with mailboxes List Attached.  Single report not possible with data given" -from christopher.d.yett.ctr@mail.mil -SmtpServer usathu55
+
+############################################
+
+GC Users.txt | foreach {add-Mailboxfolderpermission -identity ronald.j.hughes6.mil:\calendar -user $_ -accessrights editallitems,deleteallitems,publishingeditor}
+
+
+
+###################################  STORAGE NOTES   #############################################
+
+#for mailbox server : check for what is mounted and prep to move the actve databases off so as to not cause issues 
+
+move-ActiveMailboxDatabase -server <servername>
+
+#Check to make sure they moved off and nothing is mounted other than the health admin
+Get-MailboxDatabaseCopyStatus -Server <server>
+
+#check to make sure McAfee is off 
+#Let Storage guide through for moving storage array 
+#run MPIO Add HPE Open V will have to reboot
+#Check to make sure all drives are online after the reboot and if time is not a issue should run one last reboot to ensure drives come up like normal
+#run the xpinfo in CMD as admin (will have to CD to the folder and run from within CMD)
+#Check to make sure the Server can connect to exchange properly and can see databases in the forest. 
+#last go to normal powershell and run 
+balance-dags ###built in command made by disa###  WILL NOT WORK FOR FAILOUT
+
+#############################################################################################
+
+
+#########################See what devices a Mailbox is using in Exchange ##################
+
+get-activesyncdevicestatistics -mailbox <smtp> |fl *last*, devicetype, devicemodel, deviceos
+
+##############################################################################################
+
+
+## Use Where-object to filter results of command##
+Get-AddressList | Where-Object -Property Name -Like 'NORAD*'
+########################################################
+
+### Bulk users assign mailbox permissions### Be sure to point at area with CD to find the files to accomplish the next ones
+Import-csv test1.csv | foreach { Add-MailboxPermission $_.mail -User $_.name -AccessRights $_.Accessrights}
+############################################
+### Add multiple users to one mailbox ###
+Get-Content users.txt | foreach { Add-MailboxPermission "MAILBOXNaME"-User $_ -AccessRights fullaccess}
+###########################################
+
+
+## Grant send on behalf ##
+Get-Mailbox mailboxname | Set-Mailbox -GrantSendOnBehalfTo @{add= "edgar.d.torres3.mil"}
+##########################
+
+###Template for using get random to assign things at random to command script###
+
+
+$users= get-content users.txt
+$dbs= get-mailboxdatabase databasename* 
+
+#this is to make $dbs a string to work with get-random
+
+$dbs=$dbs.name
+$dbs=$dbs.name 
+$users| % {$db= get-random $dbs 
+            new-moverequest -user $_ -targetdatabase $db}
+
+            $dbs = (get-mailboxdatabase -IncludePreExchange2013 Databasename)[0..79]
+foreach ($DB in $DBS){
+Set-MailboxDatabase $DB -ProhibitSendReceiveQuota 300GB -ProhibitSendQuota 300GB -RecoverableItemsQuota 300GB -RecoverableItemsWarningQuota 300GB -CalendarLoggingQuota 100GB -IssueWarningQuota 300GB
+} #close foreach server
+
+##########################################################################
