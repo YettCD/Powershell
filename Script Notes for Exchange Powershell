@@ -297,3 +297,10 @@ Set-MailboxDatabase $DB -ProhibitSendReceiveQuota 300GB -ProhibitSendQuota 300GB
 } #close foreach server
 
 ##########################################################################
+
+
+##Look for disconnected mailbox 
+$dbs = Get-MailboxDatabase
+$dbs | foreach {Get-MailboxStatistics -Database $_.DistinguishedName} | where {$_.DisconnectReason -eq "SoftDeleted"} | Format-Table DisplayName,Database,DisconnectDate
+
+Get-MailboxStatistics -Databases #database name# | where {$_.disconnectreason} | select displayname, *date, disconnectreason
