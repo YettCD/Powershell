@@ -1,7 +1,11 @@
 
 
 function WINDOW {
-Get-Process | Select MainWindowTitle,ProcessName,Id | where{$_.MainWindowTitle -ne ""}}
+Function  WINDOWS {get-process |Where{$_.MainWindowTitle} | sort MainWindowTitle |select MainWindowTitle}
+
+
+#This is the old version would not work recently??
+#Get-Process | Select MainWindowTitle,ProcessName,Id | where{$_.MainWindowTitle -ne ""}}
 
 $Title = "SendKeys"
 $host.UI.RawUI.WindowTitle = $Title
