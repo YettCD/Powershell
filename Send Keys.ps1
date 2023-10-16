@@ -2,7 +2,7 @@
 ## This function allows you to pull the Window Titles of all winodws on the PC 
 
 function WINDOW {
-get-process |Where{$_.MainWindowTitle} | sort MainWindowTitle |select MainWindowTitle}
+get-process |Where-Object{$_.MainWindowTitle} | Sort-Object MainWindowTitle |Select-Object MainWindowTitle}
 
 
 #This is the old version would not work recently??
@@ -13,7 +13,7 @@ $Title = "SendKeys"
 $host.UI.RawUI.WindowTitle = $Title
 
 ##Clears screen and outputs the list of windows 
-cls
+Clear-Host
 Write-host "Here are all windows in use" | WINDOW | Out-Host
 $WINWIN = read-host -Prompt "What window do you want to point to? "
 
@@ -37,16 +37,16 @@ Q
 
 "@
 
-$input = Read-Host -Prompt "Choice: "
+$inputChoice = Read-Host -Prompt "Choice: "
 
-switch ($input){
+switch ($inputChoice){
 
 1 {$RKEYS = Read-Host -Prompt "Enter your keys/String not securly: "
     $RKEYS = $RKEYS.Replace('$', '{$}').Replace('&','{&}').Replace(')','{)}') }
 
 2 {$wshell = New-Object -ComObject wscript.shell;
 $wshell.AppActivate($WINWIN)
-Sleep 1
+Start-Sleep 1
 $wshell.SendKeys($RKEYS)
 $wshell.SendKeys('~') }
 
@@ -57,4 +57,4 @@ $WINWIN = read-host -Prompt "What window do you want to point to? "
 }
 
 
-}until($input -eq "q")
+}until($inputChoice -eq "q")
