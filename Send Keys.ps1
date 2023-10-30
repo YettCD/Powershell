@@ -4,10 +4,6 @@
 function WINDOW {
 get-process |Where-Object{$_.MainWindowTitle} | Sort-Object MainWindowTitle |Select-Object MainWindowTitle}
 
-
-#This is the old version would not work recently??
-#Get-Process | Select MainWindowTitle,ProcessName,Id | where{$_.MainWindowTitle -ne ""}}
-
 ##This changes the title of the window/POwershell that is running this script to SendKeys so you can filter that from your results
 $Title = "SendKeys"
 $host.UI.RawUI.WindowTitle = $Title
@@ -18,9 +14,7 @@ Write-host "Here are all windows in use" | WINDOW | Out-Host
 $WINWIN = read-host -Prompt "What window do you want to point to? "
 
 
-
 do{
- 
 
 
 Write-Host @"
