@@ -1,0 +1,16 @@
+Function STAYALIVE {
+
+param
+(
+[Parameter(Mandatory=$false)] [int]$minutes = 60,
+[Parameter(Mandatory=$false)] [int]$seconds = 60,
+[Parameter(Mandatory=$false)] [String] $outputwords = "."
+)
+
+$myshell = New-Object -com "Wscript.Shell"
+
+for ($i = 0; $i -lt $minutes; $i++) {
+  Start-Sleep -Seconds $seconds 
+  $myshell.sendkeys("$outputwords")
+}
+}
