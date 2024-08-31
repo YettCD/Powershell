@@ -49,7 +49,7 @@ def process_url(url, primary_keywords, secondary_keywords, output_file):
         print(f"An error occurred while processing {url}: {str(e)}")
 
 def main():
-    main_url = 'https://en.torlock-official.site/series/fire-force-2019'
+    main_url = 'https://en.torlock-official.site/series/the-rookie-2018'
     reqs_main = requests.get(main_url, timeout=10)
     reqs_main.raise_for_status()
     soup_main = BeautifulSoup(reqs_main.text, 'html.parser')
@@ -64,7 +64,7 @@ def main():
 
     primary_keywords = ['1080p', 'WEB']  # Primary keywords to filter magnet links
     secondary_keywords = ['720p', 'WEB']  # Secondary keywords to filter magnet links
-    output_file = 'FireFrocemagnetlinks.csv'  # Output file name
+    output_file = 'therookiemagnetlinks.csv'  # Output file name
 
     with open(output_file, 'w', newline='') as f:  # Open file in write mode
         csv_writer = csv.writer(f)

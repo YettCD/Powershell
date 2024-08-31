@@ -7,7 +7,7 @@ from selenium.webdriver.support import expected_conditions as EC
 GECKO_DRIVER_PATH = r'C:\Users\Chris\Documents\geckodriver.exe'
 
 # URL of the webpage to scrape
-url = 'https://eztvx.to/shows/576958/solo-leveling/'
+url = 'https://eztvx.to/search/the-rookie'
 
 # Set Firefox options to bypass geckodriver path check
 options = webdriver.FirefoxOptions()
@@ -31,10 +31,12 @@ try:
         EC.presence_of_all_elements_located((By.XPATH, "//a[starts-with(@href, 'magnet:')]"))
     )
 
-    # Save magnet links to a text file
-    with open('magnet_links.txt', 'w') as f:
+    # Save magnet links containing '1080p' to a text file
+    with open('therookiemagnet_links.txt', 'w') as f:
         for link in magnet_links:
-            f.write(link.get_attribute('href') + '\n')
+            magnet_link = link.get_attribute('href')
+            if '1080p' in magnet_link and ('x265' in magnet_link or 'h264' in magnet_link):  # Filter magnet links containing '1080p'
+                f.write(magnet_link + '\n')
 
 finally:
     # Close the WebDriver session
